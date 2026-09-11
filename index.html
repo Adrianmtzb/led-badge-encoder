@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Generador de tramas IR compatibles con PixMob — proyecto no oficial</title>
+<meta name="description" content="Herramienta independiente y no comercial de interoperabilidad: genera y analiza tramas infrarrojas compatibles con badges PixMob y las exporta a Pronto Hex. No afiliada a PixMob ni a Eski Inc.">
+<meta name="color-scheme" content="dark light">
+<link rel="stylesheet" href="assets/css/styles.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>📡</text></svg>">
+</head>
+<body>
+
+<a class="skip-link" href="#main">Saltar al contenido</a>
+
+<header class="topbar">
+  <div class="shell topbar-inner">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <div>
+        <h1>IR Frame Generator</h1>
+        <p>No oficial · compatible con badges PixMob</p>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Secciones">
+      <button role="tab" id="tab-generador" aria-controls="panel-generador" aria-selected="true" data-tab="generador">Generador</button>
+      <button role="tab" id="tab-presets" aria-controls="panel-presets" aria-selected="false" data-tab="presets">Presets</button>
+      <button role="tab" id="tab-analizador" aria-controls="panel-analizador" aria-selected="false" data-tab="analizador">Analizador</button>
+      <button role="tab" id="tab-protocolo" aria-controls="panel-protocolo" aria-selected="false" data-tab="protocolo">Protocolo</button>
+    </nav>
+  </div>
+</header>
+
+<aside class="notice shell" role="note">
+  <strong>Proyecto independiente, no oficial y no comercial.</strong>
+  Herramienta de investigación desarrollada por la comunidad para
+  <strong>interoperabilidad, preservación y control de dispositivos propios</strong>.
+  No está afiliada, patrocinada ni respaldada por PixMob ni por Eski Inc., no
+  reproduce ninguna especificación oficial y no garantiza compatibilidad con
+  ningún dispositivo.
+  <span class="notice-use">
+    Úsala solo con dispositivos que poseas o tengas permiso para probar.
+    No la uses en eventos en directo, ni para interferir con espectáculos,
+    equipamiento de recintos o dispositivos de terceros.
+  </span>
+  <span class="notice-links">
+    <a href="#creditos">Fuentes y créditos</a>
+    <a href="#uso-aceptable">Uso aceptable</a>
+    <a href="#licencias">Licencias</a>
+  </span>
+</aside>
+
+<main id="main" class="shell">
+
+<!-- ------------------------------------------------------------ generador -->
+<section id="panel-generador" role="tabpanel" aria-labelledby="tab-generador" class="panel">
+  <div class="layout">
+
+    <div class="stack">
+      <section class="card">
+        <h2>Color</h2>
+        <div class="color-row">
+          <input type="color" id="color-input" value="#F05000" aria-label="Selector de color">
+          <div class="color-fields">
+            <label class="field">
+              <span>Hex</span>
+              <input type="text" id="hex-input" value="#F05000" spellcheck="false" maxlength="7">
+            </label>
+            <div class="channels">
+              <label class="field"><span>R</span><input type="number" id="r-input" min="0" max="255" value="240"></label>
+              <label class="field"><span>G</span><input type="number" id="g-input" min="0" max="255" value="80"></label>
+              <label class="field"><span>B</span><input type="number" id="b-input" min="0" max="255" value="0"></label>
+            </div>
+          </div>
+        </div>
+
+        <div class="sliders">
+          <label class="slider"><span>Rojo</span><input type="range" id="r-range" min="0" max="255" value="240"></label>
+          <label class="slider"><span>Verde</span><input type="range" id="g-range" min="0" max="255" value="80"></label>
+          <label class="slider"><span>Azul</span><input type="range" id="b-range" min="0" max="255" value="0"></label>
+        </div>
+
+        <div class="quantize">
+          <div class="swatch-pair">
+            <figure><div class="swatch" id="swatch-requested"></div><figcaption>Solicitado<br><code id="requested-rgb">—</code></figcaption></figure>
+            <figure><div class="swatch" id="swatch-actual"></div><figcaption>Enviado al badge<br><code id="actual-rgb">—</code></figcaption></figure>
+          </div>
+          <p class="hint" id="quantize-hint"></p>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Comando</h2>
+        <div class="seg" role="radiogroup" aria-label="Tipo de comando">
+          <label><input type="radio" name="mode" value="short" checked><span>Pulso corto<small>6 bytes</small></span></label>
+          <label><input type="radio" name="mode" value="configurable"><span>Configurable<small>9 bytes</small></span></label>
+        </div>
+        <p class="hint" id="mode-hint"></p>
+
+        <div id="configurable-fields" class="config-fields" hidden>
+          <label class="field">
+            <span>Attack <b id="attack-label"></b></span>
+            <input type="range" id="attack" min="0" max="7" value="1">
+          </label>
+          <label class="field">
+            <span>Sustain <b id="sustain-label"></b></span>
+            <input type="range" id="sustain" min="0" max="7" value="3">
+          </label>
+          <label class="field">
+            <span>Release <b id="release-label"></b></span>
+            <input type="range" id="release" min="0" max="7" value="2">
+          </label>
+          <label class="field">
+            <span>Probabilidad <b id="chance-label"></b></span>
+            <input type="range" id="chance" min="0" max="7" value="0">
+          </label>
+
+          <div class="envelope-wrap">
+            <svg id="envelope" viewBox="0 0 320 124" role="img" aria-label="Forma del envolvente con sus tiempos"></svg>
+            <p class="hint" id="envelope-hint"></p>
+          </div>
+
+          <label class="field">
+            <span>Grupo restringido <b id="group-label"></b></span>
+            <input type="range" id="group" min="0" max="31" value="0">
+          </label>
+
+          <div class="checks">
+            <label><input type="checkbox" id="gsten"><span>Usar sustain global (<code>GST</code>)</span></label>
+          </div>
+
+          <details class="advanced">
+            <summary>Avanzado — afecta al estado del dispositivo</summary>
+            <p class="hint">
+              Estos dos campos no solo pintan un color: dependen de configuración
+              guardada en el dispositivo o la modifican. Úsalos únicamente en
+              hardware propio.
+            </p>
+            <div class="checks">
+              <label>
+                <input type="checkbox" id="onstart">
+                <span>Efecto <code>on-start</code> — puede fijar o borrar el efecto de arranque</span>
+              </label>
+              <label>
+                <input type="checkbox" id="rpen">
+                <span>Repetición interna (<code>rpen</code>) — usa el contador y retardo guardados</span>
+              </label>
+            </div>
+          </details>
+        </div>
+      </section>
+
+    </div>
+
+    <div class="stack">
+      <section class="card output-card">
+        <div class="card-head">
+          <h2>Pronto Hex</h2>
+          <div class="actions">
+            <button class="btn" data-copy="pronto-out">Copiar</button>
+          </div>
+        </div>
+        <pre class="out" id="pronto-out" tabindex="0"></pre>
+        <dl class="stats" id="stats"></dl>
+        <div class="downloads">
+          <span>Descargar</span>
+          <button class="btn btn-sm" data-download="txt">.txt</button>
+          <button class="btn btn-sm" data-download="json">.json</button>
+          <button class="btn btn-sm" data-download="ir">.ir Flipper</button>
+          <button class="btn btn-sm" data-download="h">.h C/Arduino</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Transmisión</h2>
+        <div class="grid-2">
+          <label class="field">
+            <span>Temporización</span>
+            <select id="timing">
+              <option value="capture">Compatible con lo documentado (~697 µs)</option>
+              <option value="nominal">Protocolo nominal (694.44 µs)</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Portadora</span>
+            <select id="freq">
+              <option value="109">38.0 kHz — 006D (documentado)</option>
+              <option value="108">38.4 kHz — 006C</option>
+              <option value="110">37.7 kHz — 006E</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Repeticiones <b id="repeats-label">1</b></span>
+            <input type="range" id="repeats" min="1" max="8" value="1">
+          </label>
+          <label class="field">
+            <span>Gap final <b id="gap-label">50.0 ms</b></span>
+            <input type="range" id="gap" min="5" max="100" value="50">
+          </label>
+        </div>
+        <label class="check-inline">
+          <input type="checkbox" id="separator">
+          <span>Añadir separador <code>1000000000</code> antes de cada paquete</span>
+        </label>
+        <p class="hint">Repetir un paquete válido aumenta la probabilidad de recepción y puede despertar badges inactivos.</p>
+      </section>
+      <section class="card">
+        <h2>Capas intermedias</h2>
+        <p class="hint">Cada fila es una etapa del pipeline, en orden. Útil para depurar contra una trama documentada.</p>
+        <div class="layer">
+          <div class="layer-head"><h3>Bytes lógicos</h3><button class="btn btn-sm" data-copy="logical-out">Copiar</button></div>
+          <pre class="out out-sm" id="logical-out"></pre>
+          <div class="bytemap" id="bytemap"></div>
+        </div>
+        <div class="layer">
+          <div class="layer-head"><h3>Bytes codificados</h3><button class="btn btn-sm" data-copy="encoded-out">Copiar</button></div>
+          <pre class="out out-sm" id="encoded-out"></pre>
+          <p class="hint">Tras la tabla de sustitución de 64 entradas. El checksum se calcula sobre estos bytes, no sobre los lógicos.</p>
+        </div>
+        <div class="layer">
+          <div class="layer-head"><h3>Bitstream LSB-first</h3><button class="btn btn-sm" data-copy="bits-out">Copiar</button></div>
+          <pre class="out out-sm wrap" id="bits-out"></pre>
+        </div>
+        <div class="layer">
+          <div class="layer-head"><h3>Señal</h3></div>
+          <svg id="waveform" viewBox="0 0 600 60" preserveAspectRatio="none" role="img" aria-label="Forma de onda del bitstream"></svg>
+          <p class="hint">Alto = MARK (IR modulado), bajo = SPACE. El gap final no se dibuja a escala.</p>
+        </div>
+      </section>
+    </div>
+  </div>
+</section>
+
+<!-- -------------------------------------------------------------- presets -->
+<section id="panel-presets" role="tabpanel" aria-labelledby="tab-presets" class="panel" hidden>
+  <p class="lede">
+    Cada preset se codifica en vivo con las opciones de transmisión activas.
+    Pulsa uno para cargarlo en el generador, o descarga una categoría completa.
+  </p>
+  <div id="preset-categories"></div>
+</section>
+
+<!-- ----------------------------------------------------------- analizador -->
+<section id="panel-analizador" role="tabpanel" aria-labelledby="tab-analizador" class="panel" hidden>
+  <div class="layout">
+    <section class="card">
+      <h2>Pegar captura Pronto Hex</h2>
+      <p class="hint">Acepta words hexadecimales de 4 dígitos separados por espacios, comas o saltos de línea.</p>
+      <textarea id="analyzer-input" rows="8" spellcheck="false" placeholder="0000 006D 000C 0000 001B 001B ..."></textarea>
+      <div class="actions">
+        <button class="btn btn-primary" id="analyze-btn">Analizar</button>
+        <button class="btn" id="analyze-sample">Cargar ejemplo</button>
+      </div>
+    </section>
+    <section class="card">
+      <h2>Resultado</h2>
+      <div id="analyzer-output" class="analyzer-output">
+        <p class="hint">Pega una captura y pulsa analizar.</p>
+      </div>
+    </section>
+  </div>
+</section>
+
+<!-- ------------------------------------------------------------ protocolo -->
+<section id="panel-protocolo" role="tabpanel" aria-labelledby="tab-protocolo" class="panel" hidden>
+  <div class="prose">
+    <h2>Cómo funciona</h2>
+    <p>
+      Pronto Hex no es el protocolo del badge: es el contenedor que describe la
+      señal infrarroja, es decir la portadora y las duraciones alternadas de IR
+      encendido y apagado. Dentro de esa señal viaja un comando PixMob.
+    </p>
+    <ol class="pipeline">
+      <li><b>Parámetros del efecto</b><span>color, envolvente, probabilidad, grupo</span></li>
+      <li><b>Comando lógico</b><span>6 o 9 bytes; magic <code>0x80</code>, checksum, flags, body</span></li>
+      <li><b>Sustitución + checksum</b><span>tabla de 64 entradas; el checksum se calcula después</span></li>
+      <li><b>Serialización LSB-first</b><span>bit menos significativo de cada byte primero</span></li>
+      <li><b>Celda T ≈ 694 µs</b><span>runs de unos y ceros</span></li>
+      <li><b>Runs MARK/SPACE a ≈38 kHz</b><span>modulación de la portadora</span></li>
+      <li><b>Pronto Hex</b><span>cabecera más duraciones</span></li>
+    </ol>
+
+    <h3>Detalles que sorprenden</h3>
+    <ul class="facts">
+      <li><b>El orden del color es G, R, B</b>, no R, G, B.</li>
+      <li><b>Solo se transmiten 6 bits por canal.</b> Un 255 llega al badge como 252, y hay 64 niveles por canal en lugar de 256.</li>
+      <li><b>Los colores no son índices de paleta.</b> Es RGB directo cuantizado; la documentación del protocolo descartó la hipótesis inicial de paleta.</li>
+      <li><b>El pulso visible de medio segundo no es la transmisión.</b> La trama IR dura unos pocos milisegundos; la duración del destello la genera el propio badge.</li>
+      <li><b>La sustitución no es cifrado.</b> Es una tabla reversible y conocida que probablemente evita runs largos de bits iguales.</li>
+      <li><b>El campo <code>chance</code> explica los efectos de chispeo:</b> todos los badges reciben el mismo comando y solo una fracción aleatoria lo ejecuta.</li>
+    </ul>
+
+    <h3>Tabla de tiempos</h3>
+    <div class="table-wrap">
+      <table>
+        <caption>Attack, sustain y release por clave de 3 bits</caption>
+        <thead><tr><th>Clave</th><th>Tiempo</th><th>Clave</th><th>Probabilidad</th></tr></thead>
+        <tbody id="timing-table"></tbody>
+      </table>
+    </div>
+
+    <h3>Verificación</h3>
+    <p>
+      El codificador se comprueba en cada carga contra los vectores publicados en la
+      documentación del protocolo: el comando conocido para <code>rgb(0, 252, 192)</code>,
+      su bitstream de 40 bits, la reversibilidad de la tabla y la reproducción
+      exacta de una trama documentada.
+    </p>
+    <div id="selftest" class="selftest"></div>
+
+    <h3 id="limitaciones">Limitaciones</h3>
+    <ul class="facts">
+      <li>El protocolo procede de análisis comunitario de firmware y pruebas físicas. No es una especificación oficial.</li>
+      <li>Hay diferencias entre generaciones de hardware y firmware, y algunos badges conservan configuración previa en EEPROM.</li>
+      <li>Varios campos siguen parcialmente investigados, entre ellos <code>gsten</code> y algunas ramas de sustain y release.</li>
+      <li>El resultado visible depende de batería, LEDs, difusor y ambiente. Un RGB numérico no garantiza coincidencia exacta entre modelos.</li>
+      <li>Los protocolos RF y BLE son distintos y esta herramienta no los cubre.</li>
+      <li>Una trama correcta puede no funcionar si el emisor falla: intensidad IR, driver, polaridad o timing.</li>
+    </ul>
+
+    <h3 id="uso-aceptable">Uso aceptable</h3>
+    <p>
+      Esta herramienta existe para interoperar con hardware propio, documentar un
+      protocolo y preservar conocimiento técnico. Ese es el único uso para el que
+      se publica.
+    </p>
+    <ul class="facts">
+      <li><b>Solo con dispositivos que poseas</b> o para los que tengas permiso expreso de prueba.</li>
+      <li><b>Nunca en eventos en directo.</b> No la uses para interferir con espectáculos, equipamiento de recintos, personal técnico ni dispositivos de otras personas.</li>
+      <li><b>El infrarrojo requiere línea de vista</b>, pero un emisor potente puede alcanzar muchos dispositivos a la vez. La exposición de terceros no es hipotética.</li>
+      <li><b>Nada se transmite solo.</b> La página nunca emite señales: genera datos que tú decides qué hacer con ellos, y todo el cálculo ocurre en tu navegador.</li>
+    </ul>
+
+    <h4>Comandos deliberadamente no implementados</h4>
+    <p>
+      El protocolo documenta más comandos de los que esta herramienta genera. Se
+      han dejado fuera a propósito los que escriben memoria persistente o alteran
+      el estado interno de un dispositivo:
+    </p>
+    <ul class="facts">
+      <li>Escritura de perfiles de color en EEPROM.</li>
+      <li>Asignación y cambio de group id.</li>
+      <li>Configuración persistente de <code>repeat count</code>, <code>repeat delay</code> y GST.</li>
+      <li>Comandos de reset.</li>
+    </ul>
+    <p>
+      Los únicos campos que rozan estado guardado están en la sección
+      <em>Avanzado</em> del generador, señalizados como tales.
+    </p>
+
+    <h3 id="licencias">Código abierto, licencias y atribución</h3>
+    <p>
+      Esta página es <b>software libre</b>, publicado bajo licencia MIT. El
+      código fuente completo está disponible, sin build ni minificación: lo que
+      se publica es exactamente lo que se lee. Puedes usarlo, modificarlo y
+      redistribuirlo conservando el aviso de copyright, y las aportaciones son
+      bienvenidas.
+    </p>
+    <p>
+      <a href="https://github.com/Adrianmtzb/led-badge-encoder" rel="noopener noreferrer" target="_blank">Repositorio y código fuente</a>
+      ·
+      <a href="https://github.com/Adrianmtzb/led-badge-encoder/blob/main/CONTRIBUTING.md" rel="noopener noreferrer" target="_blank">Cómo contribuir</a>
+    </p>
+    <p>
+      Este proyecto es una implementación independiente escrita a partir de
+      documentación pública de protocolo; no contiene código copiado de otros
+      proyectos, ni firmware extraído, ni volcados de memoria, ni binarios del
+      fabricante. Aun así, el conocimiento del protocolo procede enteramente del
+      trabajo de otras personas, publicado bajo licencia MIT.
+    </p>
+    <ul class="facts">
+      <li><b>PixMob_IR</b> — MIT, Copyright (c) 2024-2025 James Wang. De aquí proceden la tabla de sustitución, el checksum, los layouts de 6 y 9 bytes, los flags y las tablas de tiempos.</li>
+      <li><b>pixmob-ir-reverse-engineering</b> — MIT, Copyright (c) 2022 Dani Weidman. De aquí proceden la caracterización de la capa física y los valores <code>P_PULSO</code> publicados.</li>
+      <li>El código propio de este repositorio se publica bajo <b>licencia MIT</b>.</li>
+    </ul>
+    <p>
+      Los avisos de licencia completos están en
+      <a href="THIRD_PARTY_NOTICES.md">THIRD_PARTY_NOTICES.md</a>.
+    </p>
+    <p>
+      <b>Reclamaciones.</b> Si representas a un titular de derechos y consideras
+      que algo de este repositorio debe corregirse o retirarse, abre una issue en
+      el repositorio y se atenderá. La intención es documentar e interoperar, no
+      competir ni perjudicar a nadie.
+    </p>
+
+    <h3 id="creditos">Fuentes y créditos</h3>
+    <p>Todo el conocimiento del protocolo procede del trabajo público de otras personas:</p>
+    <ul class="sources">
+      <li>
+        <a href="https://github.com/danielweidman/pixmob-ir-reverse-engineering" rel="noopener noreferrer" target="_blank">Daniel Weidman — PixMob IR (and RF!) Reverse Engineering Project</a>
+        <span>Investigación original del protocolo, publicada por sus autores: análisis de señal, timings y herramientas.</span>
+      </li>
+      <li>
+        <a href="https://github.com/jamesw343/PixMob_IR/blob/master/docs/ir_protocol.md" rel="noopener noreferrer" target="_blank">jamesw343 — documentación del protocolo IR</a>
+        <span>Fuente principal de layouts, flags, tabla de sustitución, checksum y serialización.</span>
+      </li>
+      <li>
+        <a href="https://github.com/jamesw343/PixMob_IR" rel="noopener noreferrer" target="_blank">jamesw343 — implementación de referencia</a>
+        <span>Código derivado del análisis del microcontrolador.</span>
+      </li>
+      <li>
+        <a href="https://patents.google.com/patent/US10863607B2/en" rel="noopener noreferrer" target="_blank">Patente US-10863607-B2</a>
+        <span>Contexto técnico y temporización nominal de 694.44 µs.</span>
+      </li>
+      <li>
+        <a href="https://fccid.io/2ADS4WASH" rel="noopener noreferrer" target="_blank">FCC ID 2ADS4WASH</a>
+        <span>Documentación pública del transmisor e infrarrojo de 940 nm.</span>
+      </li>
+    </ul>
+    <p class="hint">
+      PixMob es una marca de su titular (Eski Inc.), mencionada aquí de forma
+      puramente descriptiva para identificar el hardware con el que este software
+      pretende interoperar. Esta página no está afiliada, patrocinada ni
+      respaldada por dicho titular, no usa sus logotipos ni su identidad visual, y
+      se publica sin ánimo de lucro con fines de documentación, preservación y
+      aprendizaje.
+    </p>
+  </div>
+</section>
+
+</main>
+
+<footer class="footer">
+  <div class="shell">
+    <p>
+      Proyecto de código abierto, independiente y no comercial ·
+      No afiliado a PixMob ni a Eski Inc. ·
+      Todo el cálculo ocurre en tu navegador ·
+      <a href="https://github.com/Adrianmtzb/led-badge-encoder" rel="noopener noreferrer" target="_blank">Código fuente</a> ·
+      <a href="https://github.com/Adrianmtzb/led-badge-encoder/blob/main/CONTRIBUTING.md" rel="noopener noreferrer" target="_blank">Contribuir</a> ·
+      <a href="#licencias">MIT y avisos de terceros</a>
+    </p>
+  </div>
+</footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="assets/js/protocol.js"></script>
+<script src="assets/js/presets.js"></script>
+<script src="assets/js/exporters.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>
