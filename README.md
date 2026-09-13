@@ -73,6 +73,62 @@ formatos.
 estimada, gap, bitstream reconstruido, alineación de padding, verificación de
 checksum y los campos del comando decodificado.
 
+**Secuenciador** — coloca comandos en pistas y reprodúcelos como un show, con
+línea de tiempo, zoom, ajuste a rejilla y bucle.
+
+- Los canales son los **grupos del protocolo** (`restrict group id`, 5 bits). El
+  primero es la difusión, grupo 0, que llega a todos los badges; los demás usan
+  un grupo del 1 al 31 y solo los ejecutan los badges asignados a él. El grupo de
+  un badge vive en su memoria interna, y asignarlo exige un comando que escribe
+  esa memoria: este proyecto **no lo implementa ni va a implementarlo**, igual
+  que el resto de comandos que alteran la configuración de un aparato. No es un
+  pendiente, es una decisión. Consecuencia práctica: **un badge sin grupo
+  asignado responde a todos los canales**, así que con badges de fábrica se
+  encenderá con el show entero y no solo con la difusión. Separar canales por
+  grupo únicamente funciona con badges a los que ya se les asignó uno. El grupo
+  lo pone el canal, no el clip, así que arrastrar un clip a otra pista cambia a
+  quién va dirigido.
+- Cada clip se edita en un panel flotante anclado a él: color, efecto, ataque,
+  sostén, relajación y **probabilidad**. Un botón «Probar» lo emite al instante
+  por la salida elegida, sin reproducir el show.
+- El secuenciador emite **solo el comando configurable de 9 bytes**, con todos
+  los tiempos dentro de la trama, y nunca los campos que leen o escriben la
+  memoria del badge (`gsten`, arranque y repetición). Así el mismo show suena
+  igual en cualquier aparato. El comando corto de 6 bytes sigue estando en el
+  protocolo y en la pestaña del generador. Por debajo del
+  100 % cada badge decide por su cuenta si ejecuta el comando, que es lo que
+  produce el efecto disperso en un grupo grande.
+- Los clips dibujan su envolvente encima, para reconocer de un vistazo qué hay
+  en cada sitio.
+- Los clips se duplican, se **distribuyen** a intervalos regulares hasta un
+  límite, se arrastran entre pistas y se eliminan con el botón derecho; el
+  borrado se deshace desde el aviso o con `Ctrl`/`Cmd`+`Z`.
+- El trabajo se **autoguarda como sesión en el navegador** y al abrir la pestaña
+  vuelve la última. Hay varias sesiones, con su fecha y su número de clips, que
+  se eligen, se renombran y se eliminan; «Empezar de cero» descarta la actual.
+  Todo vive en `localStorage`, con el mismo formato que el archivo del show. La
+  **pista de audio no se guarda** —es un archivo del navegador—: solo se recuerda
+  su nombre para poder volver a seleccionarla.
+- Los controles que tocan la línea de tiempo —transporte, reloj, rebobinado,
+  zoom, ajuste a rejilla y pantalla completa— van en una fila fija pegada a ella;
+  «+ Canal» está al pie de la columna de cabeceras. Lo demás —sesión, salida y
+  archivo del show— se reparte en pestañas dentro del panel de ajustes, y la
+  pestaña abierta se recuerda con la sesión, como el zoom. Reproducir con el
+  cabezal en el final rebobina y arranca; rebobinar lleva el cabezal al principio
+  sin detener. El registro de emisión se pliega y su estado también se recuerda.
+- Los shows se guardan y se cargan en `.json`, también sin salir del navegador.
+  Un archivo del formato anterior, sin grupos de canal, se abre asignándolos por
+  orden y avisando de ello.
+- **Previsualización de la envolvente**: los indicadores de canal y la vista de
+  conjunto recorren los tiempos reales de las tablas del protocolo. Es
+  aproximada; hay dos casos que el badge resuelve con su estado interno.
+- **Pista de audio** opcional para colocar los comandos sobre los golpes. El
+  archivo se decodifica en el navegador y **no se sube a ningún sitio**.
+- Salidas: emulación local, que codifica pero no transmite, y envío por HTTP a
+  un dispositivo propio. Esto último exige servir la página en local y que el
+  firmware conteste al preflight; desde el sitio publicado en HTTPS el navegador
+  lo bloquea por contenido mixto.
+
 **Protocolo** — explicación del pipeline, tablas de tiempos, limitaciones,
 fuentes y una batería de comprobaciones que se ejecuta en cada carga.
 

@@ -83,7 +83,7 @@ node tests/run.js
 ```
 
 `tests/run.js` carga los mismos archivos que sirve la web, así que prueba
-exactamente lo que se publica. Debe terminar con `45/45 comprobaciones pasan` y
+exactamente lo que se publica. Debe terminar con `96/96 comprobaciones pasan` y
 código de salida 0. Si añades comportamiento, añade su comprobación.
 
 La pestaña *Protocolo* de la web ejecuta además una batería reducida en cada

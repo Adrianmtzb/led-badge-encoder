@@ -70,7 +70,12 @@
   // ------------------------------------------------------------------ tabs
 
   function selectTab(name) {
-    for (const button of document.querySelectorAll('[role="tab"]')) {
+    /*
+     * Acotado a la navegación de arriba: dentro de los paneles hay otros
+     * conmutadores con `role="tab"` —el de ajustes del secuenciador— que no
+     * gobiernan paneles de la página.
+     */
+    for (const button of document.querySelectorAll('.tabs > [role="tab"]')) {
       const active = button.dataset.tab === name;
       button.setAttribute('aria-selected', String(active));
       $(`panel-${button.dataset.tab}`).hidden = !active;
