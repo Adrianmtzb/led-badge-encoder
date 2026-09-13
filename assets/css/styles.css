@@ -1,4 +1,4 @@
-/* PixMob IR Encoder — hoja de estilos única.
+/* Hoja de estilos única.
    Paleta neutra a propósito: el único color saturado de la interfaz debe ser
    el que el usuario está generando. */
 
@@ -782,4 +782,293 @@ td { font-family: var(--mono); }
 @media (prefers-reduced-motion: reduce) {
   * { transition-duration: 0.01ms !important; }
   html { scroll-behavior: auto; }
+}
+
+/* ===================================================================
+   Secuenciador
+   Las pistas y la regla comparten el mismo alto de fila para que las
+   cabeceras de canal cuadren con sus carriles sin sincronizar scrolls.
+   =================================================================== */
+
+#panel-secuenciador {
+  --seq-row: 56px;
+  --seq-ruler: 30px;
+  --seq-head: 200px;
+}
+
+.seq-intro {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-dim);
+  font-size: 13.5px;
+}
+
+.seq-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 18px;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.seq-transport,
+.seq-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  align-items: flex-end;
+}
+
+.seq-clock {
+  display: inline-flex;
+  gap: 6px;
+  align-items: baseline;
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--text-dim);
+}
+.seq-clock b { color: var(--text); font-weight: 600; }
+
+.seq-check {
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+  font-size: 13px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.seq-controls .field { min-width: 0; }
+.seq-controls .field input[type="text"] { width: 170px; }
+.seq-controls .field input[type="range"] { width: 120px; }
+
+/* ------------------------------------------------------------- rejilla */
+
+.seq-grid {
+  display: grid;
+  grid-template-columns: var(--seq-head) minmax(0, 1fr);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.seq-heads {
+  border-right: 1px solid var(--line);
+  background: var(--surface-2);
+}
+
+/* Reserva el hueco de la regla para que la primera pista quede alineada. */
+.seq-head-spacer {
+  height: var(--seq-ruler);
+  border-bottom: 1px solid var(--line);
+}
+
+.seq-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--seq-row);
+  padding: 0 10px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.seq-head.is-silent { opacity: 0.45; }
+
+.seq-led {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--line);
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.25);
+}
+
+.seq-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 4px 6px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+.seq-name:hover { border-color: var(--line); }
+.seq-name:focus { border-color: var(--accent); outline: none; background: var(--surface); }
+
+.seq-head-actions { display: flex; gap: 3px; flex: 0 0 auto; }
+
+.seq-toggle {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text-dim);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.seq-toggle:hover { color: var(--text); border-color: var(--text-mute); }
+.seq-toggle.is-on { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+
+/* --------------------------------------------------------- carriles */
+
+.seq-scroll { overflow-x: auto; overflow-y: hidden; }
+.seq-canvas { position: relative; }
+
+.seq-ruler {
+  position: relative;
+  height: var(--seq-ruler);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-2);
+  cursor: pointer;
+}
+
+.seq-tick {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px solid var(--line);
+  padding-left: 5px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--text-mute);
+  line-height: var(--seq-ruler);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.seq-lane {
+  position: relative;
+  height: var(--seq-row);
+  border-bottom: 1px solid var(--line-soft);
+  /* La rejilla de fondo da sensación de tiempo sin dibujar un nodo por línea. */
+  background-image: linear-gradient(to right, var(--line-soft) 1px, transparent 1px);
+  background-size: 45px 100%;
+  cursor: copy;
+}
+.seq-lane.is-silent { opacity: 0.45; }
+
+.seq-clip {
+  position: absolute;
+  top: 8px;
+  height: calc(var(--seq-row) - 16px);
+  min-width: 14px;
+  padding: 0 7px;
+  border: none;
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.22);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  overflow: hidden;
+  white-space: nowrap;
+  cursor: grab;
+  touch-action: none;
+}
+.seq-clip:active { cursor: grabbing; }
+.seq-clip.is-selected { outline: 2px solid var(--accent); outline-offset: 2px; }
+.seq-clip-label { pointer-events: none; }
+
+.seq-playhead {
+  position: absolute;
+  top: var(--seq-ruler);
+  bottom: 0;
+  left: 0;
+  width: 2px;
+  background: var(--accent);
+  pointer-events: none;
+  will-change: transform;
+}
+
+/* ------------------------------------------------------------ inferior */
+
+.seq-bottom {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.seq-inspector-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 10px;
+}
+
+.seq-swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.2);
+}
+
+.seq-fields {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 4px 14px;
+  margin: 0;
+  font-size: 13px;
+}
+.seq-fields dt { color: var(--text-mute); }
+.seq-fields dd {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.seq-inspector-actions { display: flex; gap: 8px; margin-top: 12px; }
+
+.seq-log-wrap {
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+}
+
+.seq-log { list-style: none; margin: 0; padding: 4px; }
+
+.seq-log-row {
+  display: grid;
+  grid-template-columns: 76px 90px 10px minmax(0, 1fr) minmax(0, 1.3fr);
+  gap: 8px;
+  align-items: center;
+  padding: 3px 6px;
+  border-radius: 5px;
+  font-size: 12px;
+}
+.seq-log-row:nth-child(odd) { background: var(--surface); }
+.seq-log-row.is-error { color: var(--err); }
+
+.seq-log-time { font-family: var(--mono); color: var(--text-mute); }
+.seq-log-ch { color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; }
+.seq-log-dot { width: 10px; height: 10px; border-radius: 50%; }
+.seq-log-label { overflow: hidden; text-overflow: ellipsis; }
+.seq-log-bytes {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 900px) {
+  .seq-bottom { grid-template-columns: minmax(0, 1fr); }
+  .seq-grid { --seq-head: 150px; }
+  .seq-toolbar { flex-direction: column; align-items: stretch; }
 }

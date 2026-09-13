@@ -32,6 +32,7 @@ const { PRESETS, presetToEffect } = load(
 // Los exportadores usan IRFrame como global, igual que en el navegador.
 globalThis.IRFrame = IRFrame;
 const Exporters = load('assets/js/exporters.js', 'Exporters');
+const Sequencer = load('assets/js/sequencer.js', 'Sequencer');
 
 // ---------------------------------------------------------------- harness
 
@@ -469,6 +470,209 @@ test('todo archivo exportado lleva el aviso de uso', () => {
     assert(/eventos en directo/i.test(text), `${key}: falta el aviso de uso`);
   }
   return `${Object.keys(Exporters.FORMATS).length} formatos`;
+});
+
+// ---------------------------------------------------------- secuenciador
+
+section('Secuenciador');
+
+const shortEffect = { color: { r: 240, g: 80, b: 0 }, mode: 'short' };
+
+function makeShow() {
+  const show = Sequencer.createShow({ name: 'Prueba' });
+  const [a, b] = show.channels;
+  Sequencer.addClip(show, a.id, Sequencer.createClip({ at: 0, label: 'A0', effect: shortEffect }));
+  Sequencer.addClip(show, a.id, Sequencer.createClip({ at: 1000, label: 'A1', effect: shortEffect }));
+  Sequencer.addClip(show, b.id, Sequencer.createClip({ at: 500, label: 'B0', effect: shortEffect }));
+  return show;
+}
+
+test('un show nuevo trae tres canales vacíos', () => {
+  const show = Sequencer.createShow();
+  assertEqual(show.channels.length, 3, 'canales');
+  assertEqual(show.channels.every(c => c.clips.length === 0), true, 'vacíos');
+  assertEqual(Sequencer.showDurationMs(show), 0, 'duración');
+  return '3 canales';
+});
+
+test('el pulso corto dura lo que dura el destello', () => {
+  const clip = Sequencer.createClip({ effect: shortEffect });
+  assertEqual(Sequencer.clipDurationMs(clip), Sequencer.SHORT_PULSE_MS, 'duración');
+  return `${Sequencer.SHORT_PULSE_MS} ms`;
+});
+
+test('el configurable dura attack + sustain + release', () => {
+  const clip = Sequencer.createClip({
+    effect: { color: { r: 1, g: 2, b: 3 }, mode: 'configurable', attack: 4, sustain: 3, release: 2 },
+  });
+  const expected = IRFrame.TIMER_MS[4] + IRFrame.TIMER_MS[3] + IRFrame.TIMER_MS[2];
+  assertEqual(Sequencer.clipDurationMs(clip), expected, 'duración');
+  return `${expected} ms`;
+});
+
+test('con gsten el sostén sale de la tabla GST', () => {
+  const base = { color: { r: 1, g: 2, b: 3 }, mode: 'configurable', attack: 0, sustain: 2, release: 0 };
+  const normal = Sequencer.createClip({ effect: base });
+  const global = Sequencer.createClip({ effect: { ...base, useGlobalSustain: true } });
+  assertEqual(Sequencer.clipDurationMs(normal), IRFrame.TIMER_MS[2], 'sin gsten');
+  // El mínimo visible es cosa de la interfaz: el modelo da la duración real.
+  assertEqual(Sequencer.clipDurationMs(global), IRFrame.GST_MS[2], 'con gsten');
+  assert(IRFrame.TIMER_MS[2] !== IRFrame.GST_MS[2], 'las tablas coinciden, el test no prueba nada');
+  return `${IRFrame.TIMER_MS[2]} vs ${IRFrame.GST_MS[2]} ms`;
+});
+
+test('la línea de tiempo sale ordenada por tiempo', () => {
+  const events = Sequencer.timeline(makeShow());
+  assertEqual(events.map(e => e.clip.label).join(','), 'A0,B0,A1', 'orden');
+  return events.length + ' eventos';
+});
+
+test('silenciar un canal lo saca de la línea de tiempo', () => {
+  const show = makeShow();
+  show.channels[0].muted = true;
+  assertEqual(Sequencer.timeline(show).map(e => e.clip.label).join(','), 'B0', 'solo B');
+  return 'mute';
+});
+
+test('un solo activo silencia a los demás', () => {
+  const show = makeShow();
+  show.channels[1].solo = true;
+  assertEqual(Sequencer.timeline(show).map(e => e.clip.label).join(','), 'B0', 'solo el canal en solo');
+  return 'solo';
+});
+
+test('mover un clip lo reordena y nunca lo deja en negativo', () => {
+  const show = makeShow();
+  const first = show.channels[0].clips[0];
+  Sequencer.moveClip(show, first.id, 4000);
+  assertEqual(show.channels[0].clips.map(c => c.label).join(','), 'A1,A0', 'reordenado');
+
+  const target = show.channels[0].clips[1];
+  Sequencer.moveClip(show, target.id, -500);
+  assertEqual(target.at, 0, 'recortado a cero');
+  return 'orden y recorte';
+});
+
+test('mover un clip a otro canal lo cambia de pista', () => {
+  const show = makeShow();
+  const clip = show.channels[0].clips[0];
+  Sequencer.moveClip(show, clip.id, 200, show.channels[2].id);
+  assertEqual(show.channels[0].clips.length, 1, 'origen');
+  assertEqual(show.channels[2].clips.length, 1, 'destino');
+  assertEqual(show.channels[2].clips[0].id, clip.id, 'mismo clip');
+  return 'canal 1 -> 3';
+});
+
+test('el transporte despacha cada clip una sola vez y en orden', () => {
+  const show = makeShow();
+  const sent = [];
+  const transport = Sequencer.createTransport({
+    show,
+    transmitter: Sequencer.createEmulatedTransmitter(),
+    onDispatch: e => sent.push(e.clip.label),
+  });
+  transport.play();
+  // El primer aviso solo fija la referencia del reloj.
+  transport.advance(0);
+  for (let t = 100; t <= 1600; t += 100) transport.advance(t);
+  assertEqual(sent.join(','), 'A0,B0,A1', 'despachados');
+  return sent.length + ' eventos';
+});
+
+test('un salto grande de reloj no se salta ningún clip', () => {
+  // Si la pestaña se queda en segundo plano, rAF deja de llamar: al volver
+  // llega un delta enorme y todo lo vencido debe despacharse igualmente.
+  const show = makeShow();
+  const sent = [];
+  const transport = Sequencer.createTransport({
+    show,
+    transmitter: Sequencer.createEmulatedTransmitter(),
+    onDispatch: e => sent.push(e.clip.label),
+  });
+  transport.play();
+  transport.advance(0);
+  transport.advance(5000);
+  assertEqual(sent.join(','), 'A0,B0,A1', 'nada perdido');
+  return 'delta de 5 s';
+});
+
+test('buscar hacia adelante no dispara lo que quedó atrás', () => {
+  const show = makeShow();
+  const sent = [];
+  const transport = Sequencer.createTransport({
+    show,
+    transmitter: Sequencer.createEmulatedTransmitter(),
+    onDispatch: e => sent.push(e.clip.label),
+  });
+  transport.seek(900);
+  transport.play();
+  transport.advance(0);
+  transport.advance(600);
+  assertEqual(sent.join(','), 'A1', 'solo lo posterior al cursor');
+  return 'seek(900)';
+});
+
+test('el transmisor emulado codifica la trama real sin transmitir', () => {
+  const transmitter = Sequencer.createEmulatedTransmitter();
+  assertEqual(transmitter.transmits, false, 'no transmite');
+  const clip = Sequencer.createClip({ effect: shortEffect });
+  const result = transmitter.send({ clip });
+  assertEqual(result.ok, true, 'ok');
+  const expected = IRFrame.encodeEffect(shortEffect, {});
+  assertEqual(result.frame.pronto, expected.pronto, 'pronto');
+  return result.frame.encoded.map(IRFrame.hexByte).join(' ');
+});
+
+test('un error del transmisor no rompe la reproducción', () => {
+  const show = makeShow();
+  const seen = [];
+  const transport = Sequencer.createTransport({
+    show,
+    transmitter: { name: 'roto', send() { throw new Error('sin dispositivo'); } },
+    onDispatch: e => seen.push(e.result.ok),
+  });
+  transport.play();
+  transport.advance(0);
+  transport.advance(2000);
+  assertEqual(seen.length, 3, 'se intentaron los tres');
+  assertEqual(seen.every(ok => ok === false), true, 'todos marcados como fallo');
+  return '3 fallos capturados';
+});
+
+test('el show va y vuelve de JSON sin perder nada', () => {
+  const show = makeShow();
+  show.channels[1].muted = true;
+  const back = Sequencer.fromJSON(JSON.parse(JSON.stringify(Sequencer.toJSON(show))));
+  assertEqual(back.channels.length, show.channels.length, 'canales');
+  assertEqual(
+    Sequencer.timeline(back).map(e => e.clip.label + '@' + e.clip.at).join(','),
+    Sequencer.timeline(show).map(e => e.clip.label + '@' + e.clip.at).join(','),
+    'clips audibles',
+  );
+  assertEqual(Sequencer.showDurationMs(back), Sequencer.showDurationMs(show), 'duración');
+  return 'ida y vuelta';
+});
+
+test('un JSON ajeno se rechaza', () => {
+  let threw = false;
+  try {
+    Sequencer.fromJSON({ format: 'otra-cosa' });
+  } catch {
+    threw = true;
+  }
+  assert(threw, 'se aceptó un formato desconocido');
+  return 'rechazado';
+});
+
+test('el show se exporta en los cuatro formatos', () => {
+  const entries = Sequencer.toExportEntries(makeShow());
+  assertEqual(entries.length, 3, 'entradas');
+  for (const [key, format] of Object.entries(Exporters.FORMATS)) {
+    const text = format.build(entries);
+    assert(text.length > 0, `${key}: vacío`);
+    assert(/no oficial/i.test(text), `${key}: falta el aviso`);
+  }
+  return `${entries.length} comandos en 4 formatos`;
 });
 
 // ------------------------------------------------------------------ final

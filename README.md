@@ -112,12 +112,14 @@ assets/css/styles.css
 assets/js/protocol.js    tabla, checksum, comandos, bitstream, Pronto, decoder
 assets/js/presets.js     catálogo de presets por categoría
 assets/js/exporters.js   txt, json, .ir de Flipper, cabecera C
-assets/js/app.js         interfaz
+assets/js/sequencer.js   show, línea de tiempo y transporte del secuenciador
+assets/js/app.js         interfaz del generador y del analizador
+assets/js/sequencer-ui.js  interfaz del secuenciador
 tests/run.js             suite de verificación para Node, sin dependencias
 .github/                 plantillas de PR e issues
 ```
 
-`protocol.js` no toca el DOM y puede reutilizarse tal cual en Node.
+`protocol.js` y `sequencer.js` no tocan el DOM y pueden reutilizarse tal cual en Node.
 
 ## Verificación
 

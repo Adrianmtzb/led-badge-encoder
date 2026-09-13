@@ -28,7 +28,7 @@ dispositivos propios**. Ese enfoque no es decorativo: determina qué se acepta.
 | Aportación | Motivo |
 |---|---|
 | Comandos que escriben EEPROM, asignan group id, cambian configuración persistente o resetean un dispositivo | Alteran el estado de hardware ajeno de forma no trivialmente reversible. Ver *Comandos deliberadamente no implementados* en el [README](README.md#comandos-deliberadamente-no-implementados) |
-| Transmisión desde la propia página, o cualquier integración con emisores en red | La página genera datos y nada más; quien transmite es la persona usuaria, con su propio equipo |
+| Integraciones que transmitan hacia dispositivos que no sean los tuyos: emisores compartidos, pasarelas públicas, difusión en red abierta | La página calcula tramas; llevarlas al aire es cosa de la persona usuaria y de su propio equipo. Una conexión con un dispositivo propio y bajo control directo sí cabe, siempre detrás de la interfaz `transmitter` de `sequencer.js` y nunca activada por defecto |
 | Presets con nombres de artistas, giras, recintos o eventos | Posiciona la herramienta como orientada a eventos en directo, que es justo el uso que se desaconseja |
 | Funciones de barrido, fuerza bruta o difusión masiva | Solo tienen sentido contra dispositivos que no son tuyos |
 | Código copiado de otros proyectos | Ver la sección 2 |
@@ -83,7 +83,7 @@ node tests/run.js
 ```
 
 `tests/run.js` carga los mismos archivos que sirve la web, así que prueba
-exactamente lo que se publica. Debe terminar con `28/28 comprobaciones pasan` y
+exactamente lo que se publica. Debe terminar con `45/45 comprobaciones pasan` y
 código de salida 0. Si añades comportamiento, añade su comprobación.
 
 La pestaña *Protocolo* de la web ejecuta además una batería reducida en cada
@@ -100,7 +100,9 @@ carga; también debe seguir en verde.
   | `assets/js/protocol.js` | Codificación, decodificación, Pronto. **No toca el DOM** y debe seguir siendo utilizable desde Node |
   | `assets/js/presets.js` | Catálogo de presets. Solo datos |
   | `assets/js/exporters.js` | Serialización a `.txt`, `.json`, `.ir`, `.h` |
-  | `assets/js/app.js` | Interfaz. Todo el DOM vive aquí |
+  | `assets/js/sequencer.js` | Show, línea de tiempo y transporte. **No toca el DOM**, no mide el tiempo por su cuenta y el envío queda detrás de la interfaz `transmitter` |
+  | `assets/js/app.js` | Interfaz del generador y del analizador |
+  | `assets/js/sequencer-ui.js` | Interfaz del secuenciador. Todo el DOM de esa pestaña vive aquí |
 
 - Los comentarios explican **por qué**, no qué. Un comentario que parafrasea la
   línea siguiente sobra; uno que explica una constante rara como

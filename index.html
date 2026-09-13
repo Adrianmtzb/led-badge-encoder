@@ -26,6 +26,7 @@
       <button role="tab" id="tab-generador" aria-controls="panel-generador" aria-selected="true" data-tab="generador">Generador</button>
       <button role="tab" id="tab-presets" aria-controls="panel-presets" aria-selected="false" data-tab="presets">Presets</button>
       <button role="tab" id="tab-analizador" aria-controls="panel-analizador" aria-selected="false" data-tab="analizador">Analizador</button>
+      <button role="tab" id="tab-secuenciador" aria-controls="panel-secuenciador" aria-selected="false" data-tab="secuenciador">Secuenciador</button>
       <button role="tab" id="tab-protocolo" aria-controls="panel-protocolo" aria-selected="false" data-tab="protocolo">Protocolo</button>
     </nav>
   </div>
@@ -419,6 +420,104 @@
   </div>
 </section>
 
+<!-- --------------------------------------------------------- secuenciador -->
+<section id="panel-secuenciador" role="tabpanel" aria-labelledby="tab-secuenciador" class="panel" hidden>
+
+  <p class="seq-intro">
+    Coloca comandos en varias pistas y reprodúcelos como un show. Ahora mismo
+    <b>solo se emula el envío</b>: la reproducción codifica cada trama de verdad
+    y la registra, pero no sale nada del navegador. El envío a un dispositivo
+    está detrás de una interfaz preparada para conectarse más adelante, y solo
+    tendría sentido con hardware propio.
+  </p>
+
+  <div class="seq-toolbar">
+    <div class="seq-transport">
+      <button class="btn btn-primary" id="seq-play" type="button" aria-pressed="false">▶ Reproducir</button>
+      <button class="btn" id="seq-stop" type="button">■ Detener</button>
+      <span class="seq-clock">
+        <b id="seq-time">0:00.000</b>
+        <span>/</span>
+        <span id="seq-duration">0:00.000</span>
+      </span>
+      <label class="seq-check"><input type="checkbox" id="seq-loop"><span>Bucle</span></label>
+    </div>
+
+    <div class="seq-controls">
+      <label class="field">
+        <span>Show</span>
+        <input type="text" id="seq-name" value="Show sin título" spellcheck="false">
+      </label>
+      <label class="field">
+        <span>Zoom</span>
+        <input type="range" id="seq-zoom" min="20" max="400" step="10" value="90">
+      </label>
+      <label class="field">
+        <span>Ajuste</span>
+        <select id="seq-snap">
+          <option value="0">Libre</option>
+          <option value="10">10 ms</option>
+          <option value="50">50 ms</option>
+          <option value="100" selected>100 ms</option>
+          <option value="250">250 ms</option>
+          <option value="500">500 ms</option>
+          <option value="1000">1 s</option>
+        </select>
+      </label>
+      <label class="field">
+        <span>Salida</span>
+        <select id="seq-transmitter">
+          <option value="emulado">Emulación local</option>
+          <option value="dispositivo" disabled>Dispositivo — no implementado</option>
+        </select>
+      </label>
+      <button class="btn btn-sm" id="seq-add-channel" type="button">+ Canal</button>
+      <button class="btn btn-sm" id="seq-export-show" type="button">Guardar show</button>
+      <label class="field">
+        <span>Exportar tramas</span>
+        <select id="seq-export-frames">
+          <option value="">Formato…</option>
+          <option value="txt">.txt</option>
+          <option value="json">.json</option>
+          <option value="ir">.ir</option>
+          <option value="h">.h</option>
+        </select>
+      </label>
+    </div>
+  </div>
+
+  <div class="seq-grid">
+    <div class="seq-heads" id="seq-heads"></div>
+    <div class="seq-scroll" id="seq-scroll">
+      <div class="seq-canvas">
+        <div class="seq-ruler" id="seq-ruler"></div>
+        <div class="seq-lanes" id="seq-lanes"></div>
+        <div class="seq-playhead" id="seq-playhead" aria-hidden="true"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="seq-bottom">
+    <section class="card">
+      <h2>Clip seleccionado</h2>
+      <div id="seq-inspector"></div>
+    </section>
+    <section class="card">
+      <div class="card-head">
+        <h2>Registro de emisión</h2>
+        <div class="actions">
+          <button class="btn btn-sm" id="seq-clear-log" type="button">Limpiar</button>
+        </div>
+      </div>
+      <div class="seq-log-wrap">
+        <ul class="seq-log" id="seq-log"></ul>
+      </div>
+      <p class="hint">Emulación: las tramas se codifican y se registran, pero no se transmiten.</p>
+    </section>
+  </div>
+
+</section>
+
 </main>
 
 <footer class="footer">
@@ -439,6 +538,8 @@
 <script src="assets/js/protocol.js"></script>
 <script src="assets/js/presets.js"></script>
 <script src="assets/js/exporters.js"></script>
+<script src="assets/js/sequencer.js"></script>
 <script src="assets/js/app.js"></script>
+<script src="assets/js/sequencer-ui.js"></script>
 </body>
 </html>
