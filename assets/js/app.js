@@ -70,7 +70,12 @@
   // ------------------------------------------------------------------ tabs
 
   function selectTab(name) {
-    for (const button of document.querySelectorAll('[role="tab"]')) {
+    /*
+     * Acotado a la navegación de arriba: dentro de los paneles hay otros
+     * conmutadores con `role="tab"` —el de ajustes del secuenciador— que no
+     * gobiernan paneles de la página.
+     */
+    for (const button of document.querySelectorAll('.tabs > [role="tab"]')) {
       const active = button.dataset.tab === name;
       button.setAttribute('aria-selected', String(active));
       $(`panel-${button.dataset.tab}`).hidden = !active;
@@ -859,6 +864,20 @@
     }
     container.appendChild(list);
   }
+
+  /*
+   * Puente para el secuenciador, que vive en otro archivo y necesita saber qué
+   * comando hay ahora mismo en el generador. Se expone lo mínimo y siempre como
+   * copia, para que nadie mute el estado del generador desde fuera.
+   */
+  window.GeneratorBridge = {
+    currentCommand: () => ({
+      label: currentLabel,
+      effect: { ...state, color: { ...state.color } },
+      transmission: { ...transmission },
+    }),
+    toast,
+  };
 
   // --------------------------------------------------------------- arranque
 

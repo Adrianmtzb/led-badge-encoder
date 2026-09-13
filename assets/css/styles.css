@@ -1,4 +1,4 @@
-/* PixMob IR Encoder — hoja de estilos única.
+/* Hoja de estilos única.
    Paleta neutra a propósito: el único color saturado de la interfaz debe ser
    el que el usuario está generando. */
 
@@ -782,4 +782,794 @@ td { font-family: var(--mono); }
 @media (prefers-reduced-motion: reduce) {
   * { transition-duration: 0.01ms !important; }
   html { scroll-behavior: auto; }
+}
+
+/* ===================================================================
+   Secuenciador
+   Las pistas y la regla comparten el mismo alto de fila para que las
+   cabeceras de canal cuadren con sus carriles sin sincronizar scrolls.
+   =================================================================== */
+
+#panel-secuenciador {
+  --seq-row: 60px;
+  --seq-ruler: 30px;
+  --seq-wave: 64px;
+  /* La cabecera lleva nombre, grupo e indicador: por debajo de esto se recorta. */
+  --seq-head: 252px;
+  position: relative;
+}
+
+/* Botón de pantalla completa: forma parte de la fila del transporte y se va al
+   extremo derecho, sin superponerse a nada. */
+.seq-full-btn {
+  margin-left: auto;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-dim);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+.seq-full-btn:hover { color: var(--text); border-color: var(--text-mute); }
+.seq-full-btn[aria-pressed="true"] {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+
+
+/*
+ * Dos cajas distintas y a propósito: arriba los ajustes que no tocan la línea
+ * de tiempo, repartidos en pestañas secundarias; y pegada a la línea de tiempo
+ * la fila que sí la manipula. El criterio es la cercanía entre el control y lo
+ * que modifica.
+ */
+.seq-toolbar {
+  margin-bottom: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+/*
+ * Estas pestañas no compiten con las de la página: sin la barra gruesa de
+ * abajo, más pequeñas y en el tono apagado de un control interno. Si no caben
+ * se desplazan en horizontal en vez de desbordar el panel.
+ */
+.seq-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 6px 8px 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  border-bottom: 1px solid var(--line);
+}
+
+.seq-tab {
+  flex: 0 0 auto;
+  padding: 5px 11px;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  background: none;
+  color: var(--text-mute);
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+.seq-tab:hover { color: var(--text-dim); }
+.seq-tab[aria-selected="true"] {
+  border-color: var(--line);
+  /* Se come la línea inferior del conmutador para parecer una carpeta abierta. */
+  margin-bottom: -1px;
+  padding-bottom: 6px;
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.seq-tabpanels {
+  padding: 12px 14px;
+  background: var(--surface-2);
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+/*
+ * La caja mide lo que la pestaña abierta: apilarlas dejaba un hueco muerto en
+ * las cortas. La línea de tiempo no se mueve por esto, porque su mando va fijo
+ * y pegado a ella, no aquí arriba.
+ */
+.seq-tabpanel { display: none; }
+.seq-tabpanel.is-on { display: block; }
+
+.seq-set-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  align-items: flex-end;
+  margin-bottom: 8px;
+}
+.seq-set-row:last-child { margin-bottom: 0; }
+.seq-tabpanel .hint { margin: 0; }
+.seq-tabpanel .field { min-width: 0; }
+.seq-tabpanel .field input[type="text"] { width: 170px; }
+.seq-tabpanel .field input[type="file"] {
+  max-width: 190px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+/* El autoguardado se ve como información, no como un control. */
+.seq-bar-state {
+  align-self: center;
+  max-width: 220px;
+  margin: 0;
+  font-size: 11.5px;
+}
+
+/*
+ * Fila de mando de la línea de tiempo. Queda fija al desplazarse la página
+ * porque el transporte encima solo sirve si sigue ahí cuando se baja la vista.
+ */
+.seq-timebar {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: center;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius) var(--radius) 0 0;
+  background: var(--surface);
+}
+
+.seq-transport {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  align-items: center;
+}
+/* Fila de controles, no muestrario: todos los botones con el mismo alto. */
+.seq-full-btn.seq-tb-btn { width: 34px; height: 34px; padding: 0; margin-left: 0; }
+.seq-tb-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 14px;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.seq-timebar-view {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: flex-end;
+  margin-left: auto;
+}
+.seq-timebar .field { min-width: 0; }
+.seq-timebar .field input[type="range"] { width: 104px; }
+.seq-timebar .field select { max-width: 150px; }
+
+.seq-clock {
+  display: inline-flex;
+  gap: 6px;
+  align-items: baseline;
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--text-dim);
+}
+.seq-clock b { color: var(--text); font-weight: 600; }
+
+.seq-check {
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+  font-size: 13px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------- dispositivo */
+
+.seq-device {
+  padding: 12px 14px;
+  margin-top: 10px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--warn);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.seq-device-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  align-items: flex-end;
+}
+.seq-device-row .field { flex: 1 1 220px; }
+
+.seq-warn {
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  color: var(--text-dim);
+}
+.seq-warn code { font-family: var(--mono); font-size: 11.5px; word-break: break-all; }
+
+/* ------------------------------------------------------ control de color */
+
+.seq-command {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  gap: 10px 12px;
+}
+.seq-command input[type="color"] {
+  width: 100%;
+  height: 33px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+/*
+ * Panel flotante del clip: editor y menú contextual a la vez. Se ancla al clip
+ * con coordenadas de ventana —de ahí el position: fixed— y el script lo voltea
+ * si no cabe. Cuelga del panel del secuenciador para seguir pintándose cuando
+ * este ocupa la pantalla completa.
+ */
+/*
+ * El panel es tan ancho como necesita su contenido: con menos, las etiquetas de
+ * forma y los nombres de color se desbordaban y aparecía un scroll que se
+ * llevaba el botón de cerrar fuera de la vista.
+ */
+.seq-panel {
+  position: fixed;
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  width: 390px;
+  max-width: calc(100vw - 16px);
+  max-height: min(80vh, 620px);
+  overflow: hidden;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  box-shadow: 0 18px 44px rgb(0 0 0 / 0.45);
+}
+
+/*
+ * A pantalla estrecha no hay «al lado del clip» que valga: hoja inferior. No
+ * puede ocupar media pantalla, porque entonces tapa la línea de tiempo y no hay
+ * forma de arrastrar un clip a otro canal con ella abierta.
+ */
+.seq-panel.is-sheet {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  top: auto;
+  width: auto;
+  max-width: none;
+  max-height: min(42vh, 340px);
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+
+/* Hueco al pie para poder subir las pistas por encima de la hoja. */
+#panel-secuenciador.has-sheet { padding-bottom: min(42vh, 340px); }
+
+/*
+ * La cabecera queda fuera del área que se desplaza: pase lo que pase con el
+ * contenido, cerrar el panel sigue estando a un clic.
+ */
+.seq-panel-head {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 12px;
+}
+.seq-panel-head .seq-toggle { flex: 0 0 auto; }
+
+.seq-panel-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* La forma lleva los nombres más largos: ocupa la fila entera de la rejilla. */
+.seq-field-wide { grid-column: 1 / -1; }
+.seq-command select { max-width: 100%; }
+.seq-panel-head strong {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.seq-panel .seq-fields { margin-top: 12px; }
+
+/* Confirmación del secuenciador: cuelga del panel para pintarse también con
+   la pantalla completa activa. */
+.seq-confirm-back {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgb(0 0 0 / 0.55);
+}
+
+.seq-confirm {
+  width: min(380px, 100%);
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  box-shadow: 0 18px 48px rgb(0 0 0 / 0.5);
+}
+.seq-confirm p {
+  margin: 8px 0 16px;
+  color: var(--text-dim);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.seq-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.btn-danger {
+  border-color: color-mix(in srgb, var(--err) 55%, transparent);
+  color: var(--err);
+}
+.btn-danger:hover { background: color-mix(in srgb, var(--err) 18%, transparent); }
+
+.seq-panel-note {
+  margin: 10px 0 0;
+  color: var(--text-mute);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.seq-distribute {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.seq-distribute input { width: 88px; }
+
+/* Aviso de borrado: flota sobre el secuenciador y cuelga de él para que
+   también se pinte con la pantalla completa activa. */
+.seq-undo {
+  position: fixed;
+  left: 50%;
+  bottom: 22px;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transform: translateX(-50%);
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  box-shadow: 0 10px 28px rgb(0 0 0 / 0.45);
+  font-size: 13px;
+}
+
+.seq-panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/* ------------------------------------------------------------- rejilla */
+
+.seq-grid {
+  display: grid;
+  grid-template-columns: var(--seq-head) minmax(0, 1fr);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.seq-headcol {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-right: 1px solid var(--line);
+  background: var(--surface-2);
+}
+
+.seq-heads { flex: 1 1 auto; min-height: 0; }
+
+/* Pie de la columna: «+ Canal» justo debajo del último canal. */
+.seq-headfoot {
+  flex: 0 0 auto;
+  padding: 8px 10px;
+  border-top: 1px solid var(--line-soft);
+}
+.seq-headfoot .btn { width: 100%; }
+
+/* Reserva el hueco de la regla para que la primera pista quede alineada. */
+.seq-head-spacer {
+  height: var(--seq-ruler);
+  border-bottom: 1px solid var(--line);
+}
+
+.seq-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--seq-row);
+  padding: 0 10px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+/* Nombre y grupo del protocolo, apilados: el grupo es dato, no adorno. */
+.seq-head-id {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.seq-group {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding-left: 7px;
+  font-size: 11px;
+  color: var(--text-mute);
+}
+.seq-group.is-broadcast {
+  display: block;
+  color: var(--accent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/*
+ * Con más peso que la regla global de `input[type="number"]`, que si no gana
+ * por el selector de atributo y deja la cabecera más alta que su fila.
+ */
+.seq-head-id input.seq-group-input {
+  width: 48px;
+  padding: 1px 4px;
+  font-size: 11.5px;
+}
+
+.seq-head.is-silent { opacity: 0.45; }
+
+/*
+ * Indicador de canal: una superficie de color que tiene que leerse desde lejos,
+ * no un punto. El alto lo marca la fila, así que en pantalla completa crece
+ * solo. El color y el brillo los escribe el script en cada frame siguiendo la
+ * envolvente del clip; aquí solo vive el estado apagado.
+ */
+.seq-meter {
+  width: 34px;
+  height: calc(var(--seq-row) - 18px);
+  min-height: 20px;
+  flex: 0 0 auto;
+  border-radius: 6px;
+  background: var(--line-soft);
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.3);
+}
+
+/* Vista de conjunto: lo que se vería mirando los badges a la vez. */
+
+.seq-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  /* La cabecera tiene el alto de su fila: el nombre y el grupo caben justos. */
+  padding: 2px 6px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+.seq-name:hover { border-color: var(--line); }
+.seq-name:focus { border-color: var(--accent); outline: none; background: var(--surface); }
+
+.seq-head-actions { display: flex; gap: 3px; flex: 0 0 auto; }
+
+.seq-toggle {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text-dim);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.seq-toggle:hover { color: var(--text); border-color: var(--text-mute); }
+.seq-toggle.is-on { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+
+/* --------------------------------------------------------- carriles */
+
+.seq-scroll { overflow-x: auto; overflow-y: hidden; }
+.seq-canvas { position: relative; }
+
+.seq-ruler {
+  position: relative;
+  height: var(--seq-ruler);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-2);
+  cursor: pointer;
+}
+
+.seq-tick {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px solid var(--line);
+  padding-left: 5px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--text-mute);
+  line-height: var(--seq-ruler);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/*
+ * La onda tiene carril propio arriba del todo, no de fondo: así se lee entera
+ * y los clips no la tapan. Comparte ancho y desplazamiento con la línea de
+ * tiempo porque cuelga del mismo lienzo.
+ */
+.seq-wavelane {
+  position: relative;
+  height: var(--seq-wave);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-2);
+}
+
+.seq-wave {
+  display: block;
+  pointer-events: none;
+}
+
+/* Cabecera del carril de la onda: mantiene alineadas cabeceras y carriles. */
+.seq-head-wave {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--seq-wave);
+  padding: 0 10px;
+  border-bottom: 1px solid var(--line);
+  color: var(--text-dim);
+  font-size: 12.5px;
+}
+
+.seq-lane {
+  position: relative;
+  height: var(--seq-row);
+  border-bottom: 1px solid var(--line-soft);
+  /* La rejilla de fondo da sensación de tiempo sin dibujar un nodo por línea. */
+  background-image: linear-gradient(to right, var(--line-soft) 1px, transparent 1px);
+  background-size: 45px 100%;
+  cursor: copy;
+}
+.seq-lane.is-silent { opacity: 0.45; }
+/* Carril donde caerá el clip que se está arrastrando: cambiar de canal cambia
+   el grupo del protocolo, así que conviene verlo antes de soltar. */
+.seq-lane.is-drop {
+  background-color: var(--accent-dim);
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.seq-clip {
+  position: absolute;
+  top: 8px;
+  height: calc(var(--seq-row) - 16px);
+  min-width: 14px;
+  padding: 0 7px;
+  border: none;
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.22);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  overflow: hidden;
+  white-space: nowrap;
+  cursor: grab;
+  touch-action: none;
+}
+.seq-clip:active { cursor: grabbing; }
+.seq-clip.is-selected { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* Mientras dura el clip, para atar la línea de tiempo con los indicadores. */
+.seq-clip.is-firing {
+  box-shadow:
+    inset 0 0 0 2px #fff,
+    0 0 0 2px rgb(255 255 255 / 0.55),
+    0 0 18px 2px currentColor;
+  z-index: 2;
+}
+.seq-clip-label { pointer-events: none; position: relative; z-index: 1; }
+
+/*
+ * Silueta de la envolvente: se oscurece lo que el comando NO enciende, así que
+ * el color vivo dibuja la subida, el sostén y la caída. En clips estrechos no
+ * se pinta —sería un borrón— y se deja el color plano.
+ */
+.seq-clip-env {
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / 0.42);
+  pointer-events: none;
+}
+
+.seq-playhead {
+  position: absolute;
+  top: var(--seq-ruler);
+  bottom: 0;
+  left: 0;
+  width: 2px;
+  background: var(--accent);
+  pointer-events: none;
+  will-change: transform;
+}
+
+/* ------------------------------------------------------------ inferior */
+
+.seq-bottom {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.seq-inspector-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 10px;
+}
+
+.seq-swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.2);
+}
+
+.seq-fields {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 4px 14px;
+  margin: 0;
+  font-size: 13px;
+}
+.seq-fields dt { color: var(--text-mute); }
+.seq-fields dd {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.seq-inspector-actions { display: flex; gap: 8px; margin-top: 12px; }
+
+.seq-log-wrap {
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+}
+
+.seq-log { list-style: none; margin: 0; padding: 4px; }
+
+.seq-log-row {
+  display: grid;
+  grid-template-columns: 76px 90px 22px minmax(0, 1fr) minmax(0, 1.3fr);
+  gap: 8px;
+  align-items: center;
+  padding: 3px 6px;
+  border-radius: 5px;
+  font-size: 12px;
+}
+.seq-log-row:nth-child(odd) { background: var(--surface); }
+.seq-log-row.is-error { color: var(--err); }
+
+.seq-log-time { font-family: var(--mono); color: var(--text-mute); }
+.seq-log-ch { color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; }
+.seq-log-dot {
+  width: 22px;
+  height: 16px;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.3);
+}
+.seq-log-label { overflow: hidden; text-overflow: ellipsis; }
+.seq-log-bytes {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------------------------------------------------- pantalla completa */
+
+/*
+ * La clase la pone el script tanto con la Fullscreen API como sin ella: si
+ * `requestFullscreen` falla o no existe, esto sigue ocupando la ventana. El
+ * alto de fila lo calcula el script, que es quien sabe cuántos canales hay.
+ */
+#panel-secuenciador.is-full {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 14px;
+  overflow: auto;
+  background: var(--bg);
+}
+#panel-secuenciador.is-full .seq-toolbar { margin-bottom: 0; }
+/* En pantalla completa la fila de mando se pega al borde del contenedor. */
+#panel-secuenciador.is-full .seq-timebar { flex: 0 0 auto; }
+#panel-secuenciador.is-full .seq-grid { flex: 1 1 auto; min-height: 160px; }
+#panel-secuenciador.is-full .seq-bottom {
+  flex: 0 0 auto;
+  margin-top: 0;
+  max-height: 32vh;
+  overflow: auto;
+}
+
+@media (max-width: 900px) {
+  .seq-grid { --seq-head: 196px; }
+  /* Apilado: el mando de la línea de tiempo en dos filas en vez de una. */
+  .seq-timebar-view { margin-left: 0; }
+  .seq-tabpanel .field input[type="text"] { width: 100%; }
+  .seq-timebar .field input[type="range"] { width: 100%; }
+}
+
+/*
+ * Insignia «beta» en la pestaña. Hereda el color del botón en vez de fijar uno,
+ * para que siga legible tanto en la pestaña activa como en las de reposo.
+ */
+.badge-beta {
+  margin-left: 6px;
+  padding: 1px 5px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  vertical-align: 2px;
+  opacity: 0.72;
 }

@@ -26,6 +26,7 @@
       <button role="tab" id="tab-generador" aria-controls="panel-generador" aria-selected="true" data-tab="generador">Generador</button>
       <button role="tab" id="tab-presets" aria-controls="panel-presets" aria-selected="false" data-tab="presets">Presets</button>
       <button role="tab" id="tab-analizador" aria-controls="panel-analizador" aria-selected="false" data-tab="analizador">Analizador</button>
+      <button role="tab" id="tab-secuenciador" aria-controls="panel-secuenciador" aria-selected="false" data-tab="secuenciador">Secuenciador<span class="badge-beta">beta</span></button>
       <button role="tab" id="tab-protocolo" aria-controls="panel-protocolo" aria-selected="false" data-tab="protocolo">Protocolo</button>
     </nav>
   </div>
@@ -419,6 +420,301 @@
   </div>
 </section>
 
+<!-- --------------------------------------------------------- secuenciador -->
+<section id="panel-secuenciador" role="tabpanel" aria-labelledby="tab-secuenciador" class="panel" hidden>
+
+  <!--
+    La barra crecía por acumulación y todo pesaba lo mismo. Ahora manda la
+    cercanía: lo que actúa sobre la línea de tiempo baja a una fila pegada a
+    ella, y lo que no la toca —sesión, salida y archivo del show— se reparte en
+    pestañas secundarias, deliberadamente más discretas que las de la página.
+  -->
+  <div class="seq-toolbar">
+    <div class="seq-tabs" role="tablist" aria-label="Ajustes del secuenciador">
+      <button class="seq-tab" type="button" role="tab" id="seq-tab-sesion"
+              aria-controls="seq-tabpanel-sesion" aria-selected="true" tabindex="0">Sesión</button>
+      <button class="seq-tab" type="button" role="tab" id="seq-tab-salida"
+              aria-controls="seq-tabpanel-salida" aria-selected="false" tabindex="-1">Salida</button>
+      <button class="seq-tab" type="button" role="tab" id="seq-tab-show"
+              aria-controls="seq-tabpanel-show" aria-selected="false" tabindex="-1">Show</button>
+    </div>
+
+    <div class="seq-tabpanels">
+      <!--
+        Sesiones: el trabajo se guarda solo en el navegador, así que cerrar la
+        pestaña sin querer no cuesta el show. La pista de audio no cabe ahí —es
+        un archivo del navegador— y hay que volver a elegirla.
+      -->
+      <div class="seq-tabpanel is-on" role="tabpanel" id="seq-tabpanel-sesion"
+           aria-labelledby="seq-tab-sesion">
+        <div class="seq-set-row">
+          <label class="field">
+            <span>Guardada</span>
+            <select id="seq-session-list"></select>
+          </label>
+          <label class="field">
+            <span>Nombre</span>
+            <input type="text" id="seq-session-name" maxlength="60">
+          </label>
+          <button class="btn btn-sm" id="seq-session-new" type="button">Nueva</button>
+          <button class="btn btn-sm" id="seq-session-delete" type="button">Eliminar</button>
+          <button class="btn btn-sm" id="seq-session-reset" type="button">Empezar de cero</button>
+          <span class="hint seq-bar-state" id="seq-session-state" role="status"></span>
+        </div>
+      </div>
+
+      <div class="seq-tabpanel" role="tabpanel" id="seq-tabpanel-salida"
+           aria-labelledby="seq-tab-salida">
+        <div class="seq-set-row">
+          <label class="field">
+            <span>Destino</span>
+            <select id="seq-transmitter">
+              <option value="emulado">Emulación local</option>
+              <option value="dispositivo">Dispositivo por HTTP</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="seq-device" id="seq-device" hidden>
+          <div class="seq-device-row">
+            <label class="field">
+              <span>Dirección del dispositivo</span>
+              <input type="text" id="seq-device-url" value="http://led-badge.local" spellcheck="false">
+            </label>
+            <button class="btn btn-sm" id="seq-device-test" type="button">Probar conexión</button>
+            <span class="hint" id="seq-device-status" role="status" aria-live="polite"></span>
+          </div>
+          <p class="seq-warn">
+            <b>Esto solo puede funcionar con la página servida en local.</b> Desde el
+            sitio publicado, que va por HTTPS, el navegador bloquea cualquier petición
+            a <code>http://led-badge.local</code> por contenido mixto, antes incluso de
+            mirar los permisos de origen cruzado. Y aunque se sirva la página en
+            <code>http://</code>, la cabecera que exige el firmware obliga al navegador
+            a preguntar antes con <code>OPTIONS</code>, a lo que hoy el firmware
+            responde 404. Mientras eso no cambie en el firmware, aquí verás errores de
+            red en el registro; el show sigue reproduciéndose igual.
+          </p>
+        </div>
+      </div>
+
+      <div class="seq-tabpanel" role="tabpanel" id="seq-tabpanel-show"
+           aria-labelledby="seq-tab-show">
+        <div class="seq-set-row">
+          <label class="field">
+            <span>Nombre</span>
+            <input type="text" id="seq-name" value="Show sin título" spellcheck="false">
+          </label>
+          <button class="btn btn-sm" id="seq-export-show" type="button">Guardar show</button>
+          <button class="btn btn-sm" id="seq-import-show" type="button">Cargar show</button>
+          <input type="file" id="seq-import-file" accept="application/json,.json" hidden>
+          <label class="field">
+            <span>Exportar tramas</span>
+            <select id="seq-export-frames">
+              <option value="">Formato…</option>
+              <option value="txt">.txt</option>
+              <option value="json">.json</option>
+              <option value="ir">.ir</option>
+              <option value="h">.h</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Pista de audio</span>
+            <input type="file" id="seq-audio-file" accept="audio/*">
+          </label>
+          <button class="btn btn-sm" id="seq-audio-clear" type="button" hidden>Quitar audio</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!--
+    Todo lo que manipula la línea de tiempo va pegado a ella y se queda fijo al
+    desplazar la página: de poco sirve tener el transporte encima si desaparece
+    en cuanto se baja la vista.
+  -->
+  <div class="seq-timebar">
+    <div class="seq-transport" role="group" aria-label="Transporte">
+      <button class="btn btn-primary seq-tb-btn" id="seq-play" type="button" aria-pressed="false">▶ Reproducir</button>
+      <button class="btn seq-tb-btn" id="seq-stop" type="button">■ Detener</button>
+      <!--
+        Rebobinar no es detener: devuelve el cabezal al principio y deja la
+        reproducción como estaba, así que se puede volver al inicio sin cortar.
+      -->
+      <button class="btn seq-tb-btn" id="seq-rewind" type="button"
+              title="Llevar el cabezal al principio sin detener"
+              aria-label="Llevar el cabezal al principio sin detener">⏮ Rebobinar</button>
+      <span class="seq-clock">
+        <b id="seq-time">0:00.000</b>
+        <span>/</span>
+        <span id="seq-duration">0:00.000</span>
+      </span>
+      <label class="seq-check"><input type="checkbox" id="seq-loop"><span>Bucle</span></label>
+    </div>
+
+    <div class="seq-timebar-view" role="group" aria-label="Vista de la línea de tiempo">
+      <label class="field">
+        <span>Zoom</span>
+        <input type="range" id="seq-zoom" min="20" max="400" step="10" value="90">
+      </label>
+      <label class="field">
+        <span>Ajuste</span>
+        <select id="seq-snap">
+          <option value="0">Libre</option>
+          <option value="10">10 ms</option>
+          <option value="50">50 ms</option>
+          <option value="100" selected>100 ms</option>
+          <option value="250">250 ms</option>
+          <option value="500">500 ms</option>
+          <option value="1000">1 s</option>
+        </select>
+      </label>
+      <button class="seq-full-btn seq-tb-btn" id="seq-fullscreen" type="button" aria-pressed="false"
+              title="Ver el secuenciador a pantalla completa"
+              aria-label="Ver el secuenciador a pantalla completa">⛶</button>
+    </div>
+  </div>
+
+  <div class="seq-grid">
+    <!--
+      «+ Canal» vive al pie de la columna de cabeceras, que es donde se mira
+      cuando se busca añadir un canal: justo debajo del último.
+    -->
+    <div class="seq-headcol">
+      <div class="seq-heads" id="seq-heads"></div>
+      <div class="seq-headfoot">
+        <button class="btn btn-sm" id="seq-add-channel" type="button">+ Canal</button>
+      </div>
+    </div>
+    <div class="seq-scroll" id="seq-scroll">
+      <div class="seq-canvas">
+        <div class="seq-ruler" id="seq-ruler"></div>
+        <div class="seq-wavelane" id="seq-wavelane" hidden>
+          <canvas class="seq-wave" id="seq-wave" aria-hidden="true"></canvas>
+        </div>
+        <div class="seq-lanes" id="seq-lanes"></div>
+        <div class="seq-playhead" id="seq-playhead" aria-hidden="true"></div>
+      </div>
+    </div>
+  </div>
+
+  <!--
+    Panel flotante del clip: es a la vez el editor y el menú contextual, y se
+    ancla al clip para no tener que bajar la vista al pie del panel. Cuelga del
+    propio #panel-secuenciador porque en pantalla completa no se pinta nada que
+    quede fuera del elemento que la ocupa.
+  -->
+  <div class="seq-panel" id="seq-panel" role="dialog" aria-modal="false" aria-label="Ajustes del clip" hidden>
+    <div class="seq-panel-head">
+      <span class="seq-swatch" id="seq-panel-swatch"></span>
+      <strong id="seq-panel-title">Clip</strong>
+      <button class="seq-toggle" id="seq-panel-close" type="button" aria-label="Cerrar el panel del clip">×</button>
+    </div>
+    <div class="seq-panel-body">
+    <div class="seq-command">
+      <label class="field">
+        <span>Color</span>
+        <input type="color" id="seq-color" value="#f05000">
+      </label>
+      <label class="field">
+        <span>Hexadecimal</span>
+        <input type="text" id="seq-hex" value="#F05000" spellcheck="false" maxlength="7">
+      </label>
+      <label class="field seq-field-wide">
+        <span>Efecto</span>
+        <select id="seq-shape"></select>
+      </label>
+      <label class="field">
+        <span>Ataque</span>
+        <select id="seq-attack"></select>
+      </label>
+      <label class="field">
+        <span>Sostén</span>
+        <select id="seq-sustain"></select>
+      </label>
+      <label class="field">
+        <span>Relajación</span>
+        <select id="seq-release"></select>
+      </label>
+      <label class="field">
+        <span>Probabilidad</span>
+        <select id="seq-chance"></select>
+      </label>
+    </div>
+    <p class="seq-panel-note">
+      Por debajo del 100 % cada badge decide por su cuenta si ejecuta el
+      comando, y de ahí sale el efecto disperso en un grupo grande.
+    </p>
+    <dl class="seq-fields" id="seq-panel-fields"></dl>
+    <div class="seq-panel-actions">
+      <button class="btn btn-sm" id="seq-panel-test" type="button">Probar</button>
+      <button class="btn btn-sm" id="seq-panel-duplicate" type="button">Duplicar</button>
+      <button class="btn btn-sm" id="seq-panel-distribute" type="button">Distribuir</button>
+      <button class="btn btn-sm" id="seq-panel-delete" type="button">Eliminar</button>
+    </div>
+    <div class="seq-distribute" id="seq-distribute" hidden>
+      <label class="field">
+        <span>Cada (ms)</span>
+        <input type="number" id="seq-dist-every" min="1" step="10" value="500">
+      </label>
+      <label class="field">
+        <span>Hasta (s)</span>
+        <input type="number" id="seq-dist-until" min="0" step="0.5" value="10">
+      </label>
+      <button class="btn btn-sm btn-primary" id="seq-dist-apply" type="button">Repartir</button>
+    </div>
+    </div>
+  </div>
+
+  <!--
+    El botón derecho borra sin preguntar, que es lo que hace fluido el montaje;
+    la red de seguridad es este aviso y Ctrl+Z, no un diálogo de confirmación.
+  -->
+  <div class="seq-undo" id="seq-undo" role="status" hidden>
+    <span id="seq-undo-text">Clip eliminado</span>
+    <button class="btn btn-sm" id="seq-undo-btn" type="button">Deshacer</button>
+  </div>
+
+  <!--
+    Confirmación propia: `confirm()` no se puede vestir con el tema y, en
+    pantalla completa, un diálogo del navegador saca al usuario de la vista.
+  -->
+  <div class="seq-confirm-back" id="seq-confirm" hidden>
+    <div class="seq-confirm" role="alertdialog" aria-modal="true"
+         aria-labelledby="seq-confirm-title" aria-describedby="seq-confirm-text">
+      <strong id="seq-confirm-title">¿Seguro?</strong>
+      <p id="seq-confirm-text"></p>
+      <div class="seq-confirm-actions">
+        <button class="btn btn-sm" id="seq-confirm-cancel" type="button">Cancelar</button>
+        <button class="btn btn-sm btn-danger" id="seq-confirm-ok" type="button">Eliminar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="seq-bottom">
+    <section class="card">
+      <div class="card-head">
+        <h2>Registro de emisión</h2>
+        <div class="actions">
+          <button class="btn btn-sm" id="seq-clear-log" type="button">Limpiar</button>
+          <button class="btn btn-sm" id="seq-log-toggle" type="button"
+                  aria-expanded="true" aria-controls="seq-log-body">Plegar</button>
+        </div>
+      </div>
+      <!--
+        Plegado no deja hueco: el cuerpo se quita del flujo con `hidden` y en
+        pantalla completa ese sitio se lo queda la línea de tiempo.
+      -->
+      <div id="seq-log-body">
+        <div class="seq-log-wrap">
+          <ul class="seq-log" id="seq-log"></ul>
+        </div>
+        <p class="hint" id="seq-log-hint">Emulación: las tramas se codifican y se registran, pero no se transmiten.</p>
+      </div>
+    </section>
+  </div>
+
+</section>
+
 </main>
 
 <footer class="footer">
@@ -439,6 +735,8 @@
 <script src="assets/js/protocol.js"></script>
 <script src="assets/js/presets.js"></script>
 <script src="assets/js/exporters.js"></script>
+<script src="assets/js/sequencer.js"></script>
 <script src="assets/js/app.js"></script>
+<script src="assets/js/sequencer-ui.js"></script>
 </body>
 </html>
